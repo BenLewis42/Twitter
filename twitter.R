@@ -1,6 +1,9 @@
 require(rtweet)
 require(tidyverse)
 require(httpuv)
+require(tidytext)
+require(textdata)
+require(tokenizers)
 
 
 Sys.setenv(consumer_key = "DSzrOoBnDmuWIbihQ6RnKpZoG",
@@ -30,7 +33,7 @@ token <- create_token(
 
 
 
-twitter_search <- search_tweets("#CovidVaccine", n = 1000)
+twitter_search <- search_tweets("#CovidVaccine", n = 1000, lang = "en", include_rts = FALSE)
 
 
 text_and_tags <- twitter_search %>%
@@ -40,31 +43,111 @@ text_and_tags <- twitter_search %>%
 
 
 
-anti_vax_tags <- c('plandemic', 'scamdemic', 'wakeup', 'bloodclots', 'cancer', 
-                   'nomask', 'death', 'VaccineSideEffects', 'LeaveOurKidsAlone',
-                   'HeartAttack', 'CrimesAgainstChildren')
-
-
-
-
-tweets_antivax <- text_and_tags %>%
-  mutate(anti_vax = ifelse(grepl(anti_vax_tags[1], hashtags, ignore.case = TRUE) |
-                             grepl(anti_vax_tags[2], hashtags, ignore.case = TRUE) |
-                             grepl(anti_vax_tags[3], hashtags, ignore.case = TRUE) |
-                             grepl(anti_vax_tags[4], hashtags, ignore.case = TRUE) |
-                             grepl(anti_vax_tags[5], hashtags, ignore.case = TRUE) |
-                             grepl(anti_vax_tags[6], hashtags, ignore.case = TRUE) |
-                             grepl(anti_vax_tags[7], hashtags, ignore.case = TRUE) |
-                             grepl(anti_vax_tags[8], hashtags, ignore.case = TRUE) |
-                             grepl(anti_vax_tags[9], hashtags, ignore.case = TRUE), 
-                           1, 0))
-
-tweets_antivax %>% 
-  summarize(mean(anti_vax))
-
-
-
+# anti_vax_tags <- c('plandemic', 'scamdemic', 'wakeup', 'bloodclots', 'cancer', 
+#                    'nomask', 'death', 'VaccineSideEffects', 'LeaveOurKidsAlone',
+#                    'HeartAttack', 'CrimesAgainstChildren')
 # 
+# 
+# 
+# 
+# tweets_antivax <- text_and_tags %>%
+#   mutate(anti_vax = ifelse(grepl(anti_vax_tags[1], hashtags, ignore.case = TRUE) |
+#                              grepl(anti_vax_tags[2], hashtags, ignore.case = TRUE) |
+#                              grepl(anti_vax_tags[3], hashtags, ignore.case = TRUE) |
+#                              grepl(anti_vax_tags[4], hashtags, ignore.case = TRUE) |
+#                              grepl(anti_vax_tags[5], hashtags, ignore.case = TRUE) |
+#                              grepl(anti_vax_tags[6], hashtags, ignore.case = TRUE) |
+#                              grepl(anti_vax_tags[7], hashtags, ignore.case = TRUE) |
+#                              grepl(anti_vax_tags[8], hashtags, ignore.case = TRUE) |
+#                              grepl(anti_vax_tags[9], hashtags, ignore.case = TRUE), 
+#                            1, 0))
+# 
+# tweets_antivax %>% 
+#   summarize(mean(anti_vax))
+# 
+
+
+
+
+sentiment <- get_sentiments("afinn")
+
+
+tweet_sentiment <- data.frame(row = 1)
+
+
+
+
+text_and_tags <- text_and_tags %>%
+  mutate(length = nchar(text))
+
+
+
+
+
+# long_tweets <- text_and_tags %>% 
+#   filter(length >= 200)
+
+
+
+# for (i in 1:nrow(long_tweets)) {
+#   
+#   words <- data.frame(tokenize_words(long_tweets$text[i]))
+#   
+#   names(words)[1] <- "word"
+#   
+#   
+#   words_sent <- words %>% 
+#     inner_join(sentiment)
+#   
+#   tweet_sentiment[i] <- sum(words_sent$value)
+#   
+# }
+
+#nrow(long_tweets)
+
+words = ''
+
+for (i in 1:5) {
+
+  words <- data.frame(tokenize_tweets(text_and_tags$text[i]))
+
+  subset_vector <- ''
+  
+  for (j in 1:nrow(words)) {
+    if (grepl("#", words[j,]) == TRUE) {
+      subset_vector[j] = TRUE
+      
+      
+    } else {
+      subset_vector[j] = FALSE
+      
+    }
+
+  }
+  
+  subset_words <- words %>% 
+    subset(!as.logical(subset_vector))
+  
+  names(subset_words)[1] <- "word"
+  
+  words_sent <- subset_words %>% 
+        inner_join(sentiment)
+
+      tweet_sentiment[i] <- sum(words_sent$value)
+  
+  
+}
+
+text_and_tags$text[i]
+subset_vector
+
+tweet_sentiment <- as.data.frame(t(tweet_sentiment))
+
+mean(tweet_sentiment$V1)
+
+ggplot(tweet_sentiment) +
+  geom_boxplot(aes(y = V1))
+
 # 
 # filter_age <- shear_age %>% 
 #   mutate(format_date = as.Date(date, format= "%Y-%m-%d")) %>% 
