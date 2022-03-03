@@ -1,6 +1,7 @@
 require(tidyverse)
 require(RCurl)
 require(rtweet)
+require(httr)
 
 
 biases <- read.csv("~/GitHub/Twitter/data/corpus.tsv", sep = "\t")
@@ -11,40 +12,17 @@ fact_bias <- biases %>%
 pol_bias <- biases %>% 
   select(source_url, bias)
 
-summary(pol_bias)
+# summary(pol_bias)
 
 
 
-ggplot(fact_bias) +
-  geom_bar(aes(x = fact))
-
-
-ggplot(pol_bias) +
-  geom_bar(aes(x = bias))
-
-
-
-
-# from stack overflow 
-decode.short.url <- function(u) {
-  x <- try( getURL(u, header = TRUE, nobody = TRUE, followlocation = FALSE) )
-  if(class(x) == 'try-error') {
-    print(paste("***", u, "--> ERORR!!!!"))    
-    return(u)
-  } else {
-    x <- strsplit(x, "Location: ")[[1]][2]
-    x.2  <- strsplit(x, "\r")[[1]][1]
-    if (is.na(x.2)){
-      print(paste("***", u, "--> No change."))
-      return(u)
-    }else{
-      print(paste("***", x.2, "--> resolved in -->", x.2))  
-      return(x.2)
-    }
-  }
-}
-
-#decoded <- decode.short.url('http://tinyurl.com/adcd')
+# ggplot(fact_bias) +
+#   geom_bar(aes(x = fact))
+# 
+# 
+# ggplot(pol_bias) +
+#   geom_bar(aes(x = bias))
+# 
 
 
 
@@ -80,39 +58,137 @@ token <- create_token(
 
 
 
-twitter_search <- search_tweets("#CovidVaccine", n = 1000, lang = "en", include_rts = FALSE, include_entities = TRUE)
+twitter_search <- search_tweets("#CovidVaccine", n = 5000, lang = "en", include_rts = FALSE, include_entities = TRUE)
 
 
 twitter_urls <- twitter_search %>% 
   mutate(urls = urls_expanded_url) %>% 
   select(status_id, urls)
   
-
-# extract base url from tweet
-string <- as.character(twitter_urls$urls[24])
-tweet_url <- str_extract(string, "\\w+\\.\\w+")
+twitter_urls <- twitter_urls[!is.na(twitter_urls$urls),]
 
 
 
-tweet_bias = ""
+
+
+flat_urls <- rtweet::flatten(twitter_urls)
+
+flat_urls <- separate_rows(flat_urls, 2, sep = " ")
+
+
+#myOpts <- curlOptions(connecttimeout = 10)
+
+
+# expand_urls <- function(link) {
+#   
+#   expanded = ''
+#   
+#   expanded <- httr::GET(link, config = timeout(2))$url
+#   
+#   
+#   return(expanded)
+#  
+# 
+#     
+#   
+#   
+# } 
+
+# expanded_flat <- data.frame(matrix(nrow = 1))
+
+
+# httr::timeout(2)
+# curl::timeout(2)
+
+#expanded_flat <- lapply(, expand_urls)
+# 
+# for (i in 1:length(flat_urls$urls[1:50])) {
+#   
+#   expanded = ''
+#   expanded <- tryCatch(expand_urls(flat_urls$urls[i]), finally = flat_urls$urls[i])
+#   expanded_flat[i] <- expanded
+#   
+# }
+
+# 
+# expand_urls(flat_urls$urls[24])
+# 
+# i = 21
+# tryCatch(expand_urls(flat_urls$urls[i]), finally = flat_urls$urls[i])
+# 
+# 
+# 
+
+
+
+
+
+
+exp_url_df <- t(data.frame(expanded_urls)) %>% 
+  unname() %>% 
+  data.frame()
+
+names(exp_url_df)[1] <- "urls"
+
+
+
+
+
+
+
+
+
+bias_string_df <- data.frame(matrix(nrow = 1))
 
 for (i in 1:nrow(fact_bias)) {
-  
-  bias_url <- fact_bias$source_url[i]
-  
-  if(str_detect(bias_url, tweet_url) == TRUE) {
-    
-    tweet_bias <- fact_bias$fact[i]
-    url_detected <- fact_bias$source_url[i]
-    
-    break
-    
-  } 
+  string <- as.character(fact_bias$source_url[i])
+  url_string <- str_extract(string, "\\w+\\.\\w+")
+  bias_string_df[i, 1] <- url_string
   
 }
 
-print(paste0("Url detected: ", as.character(url_detected)))
-print(paste0("Url bias: ", as.character(tweet_bias)))
+
+# 
+# url_string_df <- t(url_string_df)
+# url_string_df <- data.frame(url_string_df)
+# url_string_df <- unname(url_string_df)
+# rownames(url_string_df) <- NULL
+# 
+# names(url_string_df)[1] <- "urls"
 
 
+
+tweet_bias = data.frame(matrix(nrow = 1))
+
+for (f in 1:length(flat_urls$urls)) {
+
+
+  for (i in 1:nrow(bias_string_df)) {
+    
+    
+    if(str_detect(flat_urls$urls[f], bias_string_df[i,1]) == TRUE) {
+      
+      tweet_bias[f] <- fact_bias$fact[i]
+      #url_detected <- fact_bias$source_url[i]
+      
+      break
+      
+    } 
+    
+    tweet_bias[f] <- NA
+    
+  }
+
+}
+
+
+bias_df <- data.frame(tweet_bias[!is.na(tweet_bias)]) %>% 
+  unname()
+names(bias_df) <- 'bias'
+
+
+#nrow(bias_string_df)
+
+ggplot(bias_df) +
+  geom_bar(aes(x = bias)) 
 
