@@ -22,13 +22,11 @@ library(shiny)
 
 
 intro_panel <- tabPanel(
-  "[Tab Title]",
+  "Vaccine Bias",
   
-  titlePanel("[Page Title]"),
-  
-  img(src = "[img source]"),
-  
-  p("[Summary text for page]")
+  titlePanel("Plot"),
+  plotOutput("plot")
+
 )
 
 second_panel <- tabPanel(
@@ -41,7 +39,7 @@ second_panel <- tabPanel(
 
 
 
-ui <- navbarPage(\
-  intro_panel,
-  second_panel
+ui <- navbarPage(
+  intro_panel
+  #second_panel
 )

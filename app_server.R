@@ -3,9 +3,7 @@ require(RCurl)
 require(rtweet)
 require(httr)
 
-server <- function(input, output) {
-  
-}
+
 
 
 biases <- read.csv("~/GitHub/Twitter/data/corpus.tsv", sep = "\t")
@@ -125,16 +123,16 @@ flat_urls <- separate_rows(flat_urls, 2, sep = " ")
 
 
 
-
-
-
-exp_url_df <- t(data.frame(expanded_urls)) %>% 
-  unname() %>% 
-  data.frame()
-
-names(exp_url_df)[1] <- "urls"
-
-
+# 
+# 
+# 
+# exp_url_df <- t(data.frame(expanded_urls)) %>% 
+#   unname() %>% 
+#   data.frame()
+# 
+# names(exp_url_df)[1] <- "urls"
+# 
+# 
 
 
 
@@ -193,6 +191,16 @@ names(bias_df) <- 'bias'
 
 #nrow(bias_string_df)
 
-ggplot(bias_df) +
-  geom_bar(aes(x = bias)) 
+
+
+server <- function(input, output) {
+  output$plot <- renderPlot({
+    ggplot(bias_df) +
+      geom_bar(aes(x = bias)) 
+    
+    
+  })
+}
+
+
 
